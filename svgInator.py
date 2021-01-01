@@ -1,4 +1,4 @@
-from visual import *
+from vpython import *
 
 defaultTextStyle = {
     "text-anchor": "middle",
@@ -40,15 +40,21 @@ defaultCircleStyle = {
 
 
 class svgShape:
-    
+
     def write(self, filename):
         self.getText()
         fh = open(filename, "a")
         fh.write(self.txt)
         fh.close()
 
+    def getText(self):
+        styleTxt = textifyStyle(self.style)
+        self.txt = '<circle cx="{x}{units}" cy="{y}{units}" r="{r}{units}" style="{style}"/>\n'.format(
+            x=self.pos.x, y=self.pos.y, r=self.radius, style=styleTxt, units=self.units)
+        return self.txt
+
 class svgCircle(svgShape):
-    def __init__(self, pos = vector(0,0), radius=10., style={}, units="mm"):
+    def __init__(self, pos = vector(0,0,0), radius=10., style={}, units="mm"):
         self.style = mergeStyles(style, defaultCircleStyle) #
         self.pos = pos
         self.radius = radius
@@ -72,14 +78,14 @@ class svgLine(svgShape):
         styleTxt = textifyStyle(self.style)
         self.txt = '<line x1="{x1}{units}"  y1="{y1}{units}" x2="{x2}{units}"   y2="{y2}{units}" style="{style}"/>'.format(
                     x1=self.pos[0].x, y1=self.pos[0].y, x2=self.pos[1].x, y2=self.pos[1].y, units=self.units, style=styleTxt)
-    
+
         return self.txt
 
 
 class svgRect(svgShape):
     '''pos is a list ([]) of two vector points'''
 
-    def __init__(self, pos = vector(0,0), dim=vector(10,10), transform="", style={}, units="mm"):
+    def __init__(self, pos = vector(0,0,0), dim=vector(10,10,0), transform="", style={}, units="mm"):
         self.style = mergeStyles(style, defaultRectStyle)
         self.pos = pos
         self.units = units
@@ -113,8 +119,28 @@ class svgPolyline(svgShape):
             pts=self.ptxt, style=styleTxt)
         return self.txt
 
+# class svgPolyHex(svgPolyline):
+#     def __init__(self, pos = vector(0,0,0), radius=10., rotation=0., style={}, units="mm"):
+#         self.style = mergeStyles(style, defaultPolylineStyle) #
+#         self.pos = pos
+#         self.radius = radius
+#         self.units = units
+#
+#         self.pts = []
+#         for i in range(n_sides):
+#             angle = rotation + i * pi / 3
+#             x = r * np.cos(angle)
+#             y = r * np.sin(angle)
+#             self.pts.append(vector(x,y,0))
+#         #close curve
+#         angle = rotation
+#         x = r * np.cos(angle)
+#         y = r * np.sin(angle)
+#         self.pts.append(vector(x,y,0))
+            #svg.vectorArray_to_path(pts)
+
 class svgText(svgShape):
-    def __init__(self, text="Hello", pos= vector(0,0), style={}, transform="", units="mm"):
+    def __init__(self, text="Hello", pos= vector(0,0,0), style={}, transform="", units="mm"):
         self.style = mergeStyles(style, defaultTextStyle)
         self.text = text
         self.pos = pos
@@ -125,9 +151,9 @@ class svgText(svgShape):
         styleTxt = textifyStyle(self.style)
         self.txt = '<text transform="{transform}" x="{x}{units}" y="{y}{units}" style="{style}">{text}</text>\n'.format(
             transform=self.transform, x=self.pos.x, y=self.pos.y, text=self.text, style=styleTxt, units=self.units)
-    
 
- 
+
+
 
 def mergeStyles(inStyle, defStyle):
 
@@ -154,10 +180,10 @@ def restyle_vpython(b):
     g = int(c.y)
     b = int(c.z)
     style["fill"] = 'rgb({r},{g},{b}'.format(r=r, g=g, b=b)
-    
+
     return style
 
-        
+
 
 class svgInator:
     '''default units are mm'''
@@ -197,7 +223,7 @@ class svgInator:
     def close(self):
         self.txt = '\n</svg>'
         self.writeThis()
-        print "Output to: ", self.filename
+        print("Output to: ", self.filename)
 
 
     def reposition(self, v):
@@ -210,9 +236,9 @@ class svgInator:
         fontSize = style["font-size"][:-2]
         #print "font-size: ", fontSize
         #convert pt to mm
-        
+
         p=pos*1.0
-        
+
         adjustment = pt_to_mm(fontSize) / 2.9
         if self.axesZero=="topLeft":
             p.y = pos.y + adjustment
@@ -240,7 +266,7 @@ class svgInator:
             #print style
             return style
 
-    def circle(self, pos = vector(0,0), radius=10., style={}):
+    def circle(self, pos = vector(0,0,0), radius=10., style={}):
         npos = self.reposition(pos)
         circ = svgCircle(npos, radius, style, units=self.units)
         circ.write(self.filename)
@@ -249,7 +275,7 @@ class svgInator:
         ln = svgLine(pos=pos,  style=style, units=self.units)
         ln.write(self.filename)
 
-    def rect(self, pos = vector(0,0), dim=vector(10,10), transform="", style={}):
+    def rect(self, pos = vector(0,0,0), dim=vector(10,10,0), transform="", style={}):
         pos = self.reposition(pos)
         rect = svgRect(pos, dim, transform, style)
         rect.write(self.filename)
@@ -258,20 +284,35 @@ class svgInator:
         poly = svgPolyline(pos, style)
         poly.write(self.filename)
 
+    def regularPolygon(self, pos=vector(0,0,0), radius=10.0, rotation=0.0, n_sides=6, style={}):
+        pts = []
+        for i in range(n_sides):
+            angle = rotation + i * pi / 3
+            x = radius * cos(angle)
+            y = radius * sin(angle)
+            pts.append(vector(x,y,0))
+        #close curve
+        angle = rotation
+        x = radius * cos(angle)
+        y = radius * sin(angle)
+        pts.append(vector(x,y,0))
+        poly = svgPolyline(pts, style)
+        poly.write(self.filename)
+
     def text(self, text="Hello", pos= vector(0,0,0), style={}, rotation=0.0):
-        
+
         npos = self.reposition(pos)
-        
+
         style = mergeStyles(style, defaultTextStyle)
         npos = self.vertical_center_text(pos=npos, style=style)
 
         # rotation
         transform = ""
-        if rotation <> 0.0:
+        if rotation != 0.0:
             x = mm_to_px(npos.x)
             y = mm_to_px(npos.y)
             transform = "rotate({rotation},{x},{y})".format(rotation=rotation, x=x, y=y)
-        
+
         txt = svgText(text, npos, style, units=self.units, transform=transform)
         txt.write(self.filename)
 
@@ -305,7 +346,7 @@ class svgInator:
         for i in range(1, len(vectorArray)):
             pt = self.reposition(vector(vectorArray[i]))
             if units == "mm":
-                pt = vector(mm_to_px(pt.x), mm_to_px(pt.y))
+                pt = vector(mm_to_px(pt.x), mm_to_px(pt.y),0)
             txt += "L{x},{y}\n".format(x=pt.x,y=pt.y)
         self.path(txt, style=style)
         #print txt
@@ -317,7 +358,7 @@ class svgInator:
         self.vectorArray_to_path(inCurve.pos, style=style)
 
 
-    def element_circle(self, element_symbol = "H", radius = 10., pos=vector(0,0), textStyle = {}, circleStyle = {}):
+    def element_circle(self, element_symbol = "H", radius = 10., pos=vector(0,0,0), textStyle = {}, circleStyle = {}):
         #make viewbox
 ##        self.txt += '<svg viewBox="{x} {y} {w} {h}" width="{w}{units}" height="{h}{units}"\n'.format(
 ##            x=pos.x, y=pos.y, w=dim.x, h=dim.y, units=self.units)
@@ -346,7 +387,7 @@ class svgInator:
         fh = open(filename, "w")
         fh.write(self.txt)
         fh.close()
-        print "done"
+        print( "done")
 
     def defaults(self):
 
@@ -361,24 +402,9 @@ class svgInator:
             "fill": "none"
             }
 
-        
+
 def pt_to_mm(pt):
     return float(pt)*0.3527777
 
 def mm_to_px(mm):
     return float(mm)*3.543307
-
-# testing
-##s = svgInator()
-##s.polyline(pos = [vector(0,0), vector(20,50), vector(10,10)], style={"stroke": "#0f0",
-##            "stroke-width": "2pt",
-##            "fill": "#d98"
-##              })
-##s.circle(pos=vector(5,8), style={"fill":"#abc"})
-##s.text("hi")
-##s.rect(pos=vector(40, 0), dim=vector(20,10))
-##s.element_circle("He", pos = vector(40,40))
-##s.text("He", pos=vector(40,40), style={"text-anchor":"left"})
-##s.line(pos=[vector(10,10), vector(40,40)])
-##print "done"
-
