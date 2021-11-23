@@ -339,7 +339,7 @@ class svgInator:
 
         self.writeThis()
 
-    def vectorArray_to_path(self, vectorArray, units="mm", style={}):
+    def vectorArray_to_path(self, vectorArray, units="mm", style={}, rounding=-1):
         pt = self.reposition(vector(vectorArray[0]))
         txt = "M{x},{y}\n".format(x=mm_to_px(pt.x), y=mm_to_px(pt.y))
         #print txt
@@ -347,15 +347,22 @@ class svgInator:
             pt = self.reposition(vector(vectorArray[i]))
             if units == "mm":
                 pt = vector(mm_to_px(pt.x), mm_to_px(pt.y),0)
-            txt += "L{x},{y}\n".format(x=pt.x,y=pt.y)
+            if rounding >= 0:
+                pt.x = round(pt.x, rounding)
+                pt.y = round(pt.y, rounding)
+            txt += f"L{pt.x},{pt.y}\n"
         self.path(txt, style=style)
         #print txt
 
     # write vpython curve
-    def writeCurve(self, inCurve, units="mm", style={}):
-        #print "Hi: in writeCurve"
-        #print inCurve.pos
-        self.vectorArray_to_path(inCurve.pos, style=style)
+    def writeCurve(self, inCurve, units="mm", style={}, rounding=-1):
+        # print ("Hi: in writeCurve")
+        # pprint (vars(inCurve))
+        # print(inCurve._pts)
+        pts = []
+        for p in inCurve._pts:
+            pts.append(p["pos"])
+        self.vectorArray_to_path(pts, style=style)
 
 
     def element_circle(self, element_symbol = "H", radius = 10., pos=vector(0,0,0), textStyle = {}, circleStyle = {}):
