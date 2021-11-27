@@ -2,7 +2,8 @@ from vpython import *
 from svgInator import *
 import random
 
-outFile = "outRad.svg"
+outFile = "outRad-n3.svg"
+nFreq = 3
 
 def f(theta):
     r = 3 * sin(theta)
@@ -44,7 +45,7 @@ cv = curve()
 
 p = []
 for theta in arange(xmin,xmax+dx,dx):
-    (x, y) = ffr(theta, a= 10, n=5, rf=0.05)
+    (x, y) = ffr(theta, a= 10, n=nFreq, rf=0.05)
     x = round(x, 2)
     y = round(y, 2)
     if y <= 10.0 and y >= -10.0:
