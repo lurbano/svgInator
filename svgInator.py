@@ -66,6 +66,21 @@ class svgCircle(svgShape):
             x=self.pos.x, y=self.pos.y, r=self.radius, style=styleTxt, units=self.units)
         return self.txt
 
+class svgEllipse(svgShape):
+    def __init__(self, pos = vector(0,0,0), rx=10., ry=20., transform="", style={}, units="mm"):
+        self.style = mergeStyles(style, defaultCircleStyle) #
+        self.pos = pos
+        self.rx = rx 
+        self.ry = ry 
+        self.units = units 
+        self.transform = transform
+    
+    def getText(self):
+        styleTxt = textifyStyle(self.style)
+        self.txt = f'<ellipse cx="{self.pos.x}{self.units}" cy="{self.pos.y}{self.units}" rx="{self.rx}{self.units}" ry="{self.ry}{self.units}" style="{styleTxt}" transform="{self.transform}"/>\n'
+        return self.txt
+
+
 class svgLine(svgShape):
     '''pos is a list ([]) of two vector points'''
 
@@ -270,6 +285,11 @@ class svgInator:
         npos = self.reposition(pos)
         circ = svgCircle(npos, radius, style, units=self.units)
         circ.write(self.filename)
+    
+    def ellipse(self, pos = vector(0,0,0), rx=10., ry=20., transform="", style={}):
+        npos = self.reposition(pos)
+        elps = svgEllipse(npos, rx, ry, transform, style, units=self.units)
+        elps.write(self.filename)
 
     def line(self, pos, style={}):
         ln = svgLine(pos=pos,  style=style, units=self.units)
